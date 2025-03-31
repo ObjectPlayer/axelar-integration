@@ -14,16 +14,16 @@ const ethereumProvider = new ethers.JsonRpcProvider(ETH_SEPOLIA_RPC_URL);
 const baseProvider = new ethers.JsonRpcProvider(BASE_SEPOLIA_RPC_URL);
 
 // Axelar contract addresses (testnet)
-const interchainTokenServiceContractAddress = process.env.INTERCHAIN_TOKEN_SERVICE_ADDRESS || "0xB5FB4BE02232B1bBA4dC8f81dc24C26980dE9e3C";
-const interchainTokenFactoryContractAddress = process.env.INTERCHAIN_TOKEN_FACTORY_ADDRESS || "0x83a93500d23Fbc3e82B410aD07A6a9F7A0670D66";
-
-// Your token addresses (need to be updated after deployment)
-const destinationchain_ethereum = process.env.DESTINATION_CHAIN_ETHEREUM || "ethereum-sepolia";
-const destinationchain_base = process.env.DESTINATION_CHAIN_BASE || "base-sepolia";
+const interchainTokenServiceContractAddress = "0xB5FB4BE02232B1bBA4dC8f81dc24C26980dE9e3C";
+const interchainTokenFactoryContractAddress = "0x83a93500d23Fbc3e82B410aD07A6a9F7A0670D66";
 
 // Replace with your actual token addresses after deployment
 const ethereumMoonTokenAddress = process.env.ETHEREUM_MOON_TOKEN_ADDRESS || "YOUR_MOON_TOKEN_ETH_ADDRESS"; 
 const baseMoonTokenAddress = process.env.BASE_MOON_TOKEN_ADDRESS || "YOUR_MOON_TOKEN_BASE_ADDRESS";
+
+// Axelar destination chain names
+const destinationchain_ethereum = process.env.DESTINATION_CHAIN_ETHEREUM || "ethereum-sepolia";
+const destinationchain_base = process.env.DESTINATION_CHAIN_BASE || "base-sepolia";
 
 // TokenManager type - using LOCK_RELEASE = 2 / MINT_BURN (4)
 const LOCK_RELEASE = 2;
@@ -73,7 +73,6 @@ async function registerTokenMetadataOnEthereum() {
     signer
   );
 
-
   // Register the token metadata
   const tx = await interchainTokenServiceContract.registerTokenMetadata(
     ethereumMoonTokenAddress,
@@ -85,7 +84,6 @@ async function registerTokenMetadataOnEthereum() {
   await tx.wait();
   
   console.log("Token metadata registered on Ethereum Sepolia successfully");
-  
 }
 
 // Step 2: Register token metadata with the ITS Contract on Base Sepolia
@@ -101,7 +99,6 @@ async function registerTokenMetadataOnBase() {
     interchainTokenServiceABI,
     signer
   );
-
 
   // Register the token metadata
   const tx = await interchainTokenServiceContract.registerTokenMetadata(
@@ -128,7 +125,6 @@ async function registerCustomTokenOnEthereum() {
   const salt = "0x" + crypto.randomBytes(32).toString("hex");
   console.log("Generated Salt:", salt);
 
-
   // Get the interchain token factory contract instance
   const interchainTokenFactoryContract = await getContractInstance(
     interchainTokenFactoryContractAddress,
@@ -144,7 +140,7 @@ async function registerCustomTokenOnEthereum() {
   const tx = await interchainTokenFactoryContract.registerCustomToken(
     salt,
     tokenAddress,
-    MINT_BURN,
+    LOCK_RELEASE,
     minter,
     {value: ethers.parseEther("0.001")}
   );
@@ -152,20 +148,11 @@ async function registerCustomTokenOnEthereum() {
   console.log(`Transaction hash: ${tx.hash}`);
   await tx.wait();
 
-  // Get the TokenId and TokenManagerAddress
-  const tokenId = await interchainTokenFactoryContract.getCustomTokenId(
-    await signer.getAddress(),
-    salt
-  );
-
-  console.log(`TokenId: ${tokenId}`);
-  console.log("Custom token registered on Ethereum Sepolia successfully");
-
   return salt;
 }
 
 // Step 4: Link custom token from Ethereum Sepolia to Base Sepolia
-async function linkCustomTokenFromEthereumToBase(salt:string) {
+async function linkCustomTokenFromEthereumToBase(salt: string) {
   console.log("Linking custom token from Ethereum Sepolia to Base Sepolia...");
   
   // Get a signer for Ethereum network
@@ -188,7 +175,7 @@ async function linkCustomTokenFromEthereumToBase(salt:string) {
     salt,
     destinationchain_base,
     baseMoonTokenAddress,
-    LOCK_RELEASE,
+    MINT_BURN,
     minter,
     gasAmount,
     { value: gasAmount }
@@ -198,11 +185,10 @@ async function linkCustomTokenFromEthereumToBase(salt:string) {
   await tx.wait();
 
   console.log("Custom token linked from Ethereum Sepolia to Base Sepolia successfully");
-  
 }
 
 // Step 5: Get token manager address 
-async function getTokenIdAndManagerAddress(salt:string) {
+async function getTokenIdAndManagerAddress(salt: string) {
   console.log("Getting token manager address from the Factory contract...");
   
   // Get a signer for Ethereum network
@@ -217,29 +203,29 @@ async function getTokenIdAndManagerAddress(salt:string) {
   
   const minter = await signer.getAddress();
 
-   // Retrieve linked token id
-  const tokenId = await interchainTokenFactoryContract.linkToken(
+  // Retrieve linked token id
+  const tokenId = await interchainTokenFactoryContract.linkedTokenId(
     minter,
-    salt,
+    salt
   );
 
-  console.log(`TokenId for : ${tokenId}`);
+  console.log(`TokenId: ${tokenId}`);
 
-
-    // Get the InterchainTokenService contract instance
-    const interchainTokenServiceContract = await getContractInstance(
-      interchainTokenServiceContractAddress,
-      interchainTokenServiceABI,
-      signer,
-    );
+  // Get the InterchainTokenService contract instance
+  const interchainTokenServiceContract = await getContractInstance(
+    interchainTokenServiceContractAddress,
+    interchainTokenServiceABI,
+    signer,
+  );
   
   const tokenManagerAddress =
     await interchainTokenServiceContract.tokenManagerAddress(tokenId);
+  
+  console.log(`tokenManagerAddress: ${tokenManagerAddress}`);
+
 
   return { tokenId, tokenManagerAddress };
-  
 }
-
 
 // Step 6: Assign minter role to token manager on Base Sepolia
 async function transferMintAndBurnAccessToTokenManagerOnBase(tokenManagerAddress: string) {
@@ -267,8 +253,8 @@ async function transferMintAndBurnAccessToTokenManagerOnBase(tokenManagerAddress
   const tx2 = await tokenContract.grantRole(BURNER_ROLE, tokenManagerAddress);
   console.log(`Transaction hash for granting burner role: ${tx2.hash}`);
   await tx2.wait();
-
-  console.log("Minter and Burner roles transferred to token manager on Base Sepolia successfully");
+  
+  console.log("Minter/burner roles granted to token manager on Base Sepolia successfully");
 }
 
 // Step 7.1: Approve tokens
@@ -281,42 +267,40 @@ async function approveTokens(isEthereum: boolean, tokenManagerAddress: string, a
   let tokenContract;
 
   if (isEthereum) {
-  // Get the token contract instance
-   tokenContract = await getContractInstance(
-    ethereumMoonTokenAddress,
-    moonTokenEthABI,
-    signer
-  );
+    // Get the token contract instance
+    tokenContract = await getContractInstance(
+      ethereumMoonTokenAddress,
+      moonTokenEthABI,
+      signer
+    );
   } else {
-  // Get the token contract instance
-  tokenContract = await getContractInstance(
-    baseMoonTokenAddress,
-    moonTokenBaseABI,
-    signer
-  );
-    
+    // Get the token contract instance
+    tokenContract = await getContractInstance(
+      baseMoonTokenAddress,
+      moonTokenBaseABI,
+      signer
+    );
   }
 
   // Approve tokens 
-  const tx1 = await tokenContract.approve(tokenManagerAddress, amount);
-  console.log(`Transaction hash for approving token: ${tx1.hash}`);
-  await tx1.wait();
-
+  const tx = await tokenContract.approve(tokenManagerAddress, amount);
+  console.log(`Approval transaction hash: ${tx.hash}`);
+  await tx.wait();
+  
+  console.log("Tokens approved successfully");
 }
 
 // Step 7: Transfer tokens from Ethereum to Base
-async function transferTokensFromEthereumToBase(tokenManagerAddress:string, tokenId: string, receiverAddress: string) {
+async function transferTokensFromEthereumToBase(tokenManagerAddress: string, tokenId: string, receiverAddress: string) {
   console.log("Transferring tokens from Ethereum to Base...");
   
   // Get a signer for Ethereum network
   const signer = await getSigner(true);
 
-
   const amount = ethers.parseEther("1000").toString();
 
   // Approve tokens 
   await approveTokens(true, tokenManagerAddress, amount);
-
 
   // Transfer tokens
   const interchainTokenServiceContract = await getContractInstance(
@@ -339,22 +323,19 @@ async function transferTokensFromEthereumToBase(tokenManagerAddress:string, toke
   );
 
   console.log("Transfer Transaction Hash:", transfer.hash);
-
 }
 
 // Step 8: Transfer tokens from Base to Ethereum
-async function transferTokensFromBaseToEthereum(tokenManagerAddress:string, tokenId: string, receiverAddress: string) {
+async function transferTokensFromBaseToEthereum(tokenManagerAddress: string, tokenId: string, receiverAddress: string) {
   console.log("Transferring tokens from Base to Ethereum...");
   
   // Get a signer for Base network
   const signer = await getSigner(false);
 
-
   const amount = ethers.parseEther("1000").toString();
 
   // Approve tokens 
   await approveTokens(false, tokenManagerAddress, amount);
-
 
   // Transfer tokens
   const interchainTokenServiceContract = await getContractInstance(
@@ -362,7 +343,6 @@ async function transferTokensFromBaseToEthereum(tokenManagerAddress:string, toke
     interchainTokenServiceABI,
     signer,
   );
-
 
   const transfer = await interchainTokenServiceContract.interchainTransfer(
     tokenId, // tokenId, the one you store in the earlier step
@@ -378,7 +358,6 @@ async function transferTokensFromBaseToEthereum(tokenManagerAddress:string, toke
   );
 
   console.log("Transfer Transaction Hash:", transfer.hash);
-
 }
 
 // Main function to orchestrate the entire process
@@ -390,8 +369,9 @@ async function main() {
     await registerTokenMetadataOnEthereum();
     await registerTokenMetadataOnBase();
     
-    // Step 3 : Register custom tokens on primary chain
-    const salt =  await registerCustomTokenOnEthereum();
+    // Step 3: Register custom tokens on primary chain
+    // Check if a salt is provided in the environment variables, otherwise generate a new one
+    const salt = process.env.SALT || await registerCustomTokenOnEthereum();
         
     // Step 4: Link tokens across chains
     await linkCustomTokenFromEthereumToBase(salt);
@@ -399,8 +379,7 @@ async function main() {
     // Step 5: Get token manager address
     const { tokenId, tokenManagerAddress } = await getTokenIdAndManagerAddress(salt);
     
-
-    // Step 6 : Transfer mint/burn access to token managers
+    // Step 6: Transfer mint/burn access to token managers
     await transferMintAndBurnAccessToTokenManagerOnBase(tokenManagerAddress);
     
     console.log("Axelar cross-chain integration completed successfully!");
@@ -409,10 +388,10 @@ async function main() {
     console.log(`Salt (save for future reference): ${salt}`);
 
     // Uncomment the following lines to test token transfers
-    // You'll need to provide a valid receiver address
-    // const receiverAddress = "YOUR_RECEIVER_ADDRESS"; 
-    // const tokenManagerAddress = "YOUR_TOKEN_MANAGER_ADDRESS"; 
-    // const tokenId = "YOUR_TOKEN_ID"; 
+    // Be sure to replace with a valid receiver address
+    // const receiverAddress = process.env.RECEIVER_ADDRESS || "0x";
+    // const tokenManagerAddress = process.env.TOKEN_MANAGER_ADDRESS || "";
+    // const tokenId = process.env.TOKEN_ID || "";
 
     // await transferTokensFromEthereumToBase(tokenManagerAddress, tokenId, receiverAddress);
     // await transferTokensFromBaseToEthereum(tokenManagerAddress, tokenId, receiverAddress);

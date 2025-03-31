@@ -18,7 +18,7 @@ export const networkConfig: NetworkConfigMap = {
   11155111: {
     name: "sepolia",
   },
-  43113: {
+  84532: {
     name: "base-sepolia",
   },
 };
