@@ -14,7 +14,7 @@ In the rapidly evolving world of blockchain, the ability to transfer assets and 
 
 ### Architecture Overview
 
-![Architecture Diagram](architecture-diagram.svg)
+![Architecture Diagram](utils/Axelar_and_SquidRouter.png)
 *Figure 1: Architecture of Cross-Chain Integration using Axelar and Squid Router.*
 
 ### Prerequisites
@@ -64,10 +64,10 @@ npx hardhat run scripts/axelar-crosschain-integration.ts
 
 ### Step 6: Verify Token Transfers
 
-![Process Flow Diagram](path/to/process-flow-diagram.png)
-*Figure 2: Process Flow for Cross-Chain Token Transfers.*
+![Token Transfer Result](utils/Axelar-scan.png)
+*Figure 2: Axelar Explorer showing successful cross-chain token transfer.*
 
-Uncomment the token transfer lines in the script and provide a valid receiver address to test token transfers between the two networks.
+Uncomment the token transfer lines in the script and provide a valid receiver address to test token transfers between the two networks. You can verify the transfers using Axelar Explorer as shown above.
 
 ## Conclusion
 
