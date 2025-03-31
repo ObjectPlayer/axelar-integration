@@ -51,8 +51,8 @@ The architecture consists of two main components:
 
 This project uses Axelar's Interchain Token Service (ITS) to link the two custom tokens across chains. The integration follows these steps:
 
-1. Deploy MoonTokenEth on Ethereum Sepolia (completed)
-2. Deploy MoonTokenBase on Base Sepolia (completed)
+1. Deploy MoonTokenEth on Ethereum Sepolia 
+2. Deploy MoonTokenBase on Base Sepolia 
 3. Register token metadata with the ITS Contract on both chains
 4. Register both tokens with the Interchain Token Factory
 5. Link the tokens using the Interchain Token Factory
@@ -127,8 +127,8 @@ npx hardhat run scripts/axelar-crosschain-integration.ts
 ```
 
 This script handles:
-- Registering token metadata with the ITS Contract
-- Registering both tokens with the Interchain Token Factory
+- Registering both token metadata with the ITS Contract
+- Registering token with the Interchain Token Factory
 - Linking the tokens across chains
 - Setting up minting/burning permissions
 

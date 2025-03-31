@@ -365,36 +365,36 @@ async function main() {
   try {
     console.log("Starting Axelar cross-chain integration...");
     
-    // Step 1 & 2: Register token metadata on both chains
-    await registerTokenMetadataOnEthereum();
-    await registerTokenMetadataOnBase();
+    // // Step 1 & 2: Register token metadata on both chains
+    // await registerTokenMetadataOnEthereum();
+    // await registerTokenMetadataOnBase();
     
-    // Step 3: Register custom tokens on primary chain
-    // Check if a salt is provided in the environment variables, otherwise generate a new one
-    const salt = process.env.SALT || await registerCustomTokenOnEthereum();
+    // // Step 3: Register custom tokens on primary chain
+    // // Check if a salt is provided in the environment variables, otherwise generate a new one
+    // const salt =await registerCustomTokenOnEthereum();
         
-    // Step 4: Link tokens across chains
-    await linkCustomTokenFromEthereumToBase(salt);
+    // // Step 4: Link tokens across chains
+    // await linkCustomTokenFromEthereumToBase(salt);
 
-    // Step 5: Get token manager address
-    const { tokenId, tokenManagerAddress } = await getTokenIdAndManagerAddress(salt);
+    // // Step 5: Get token manager address
+    // const { tokenId, tokenManagerAddress } = await getTokenIdAndManagerAddress(salt);
     
-    // Step 6: Transfer mint/burn access to token managers
-    await transferMintAndBurnAccessToTokenManagerOnBase(tokenManagerAddress);
+    // // Step 6: Transfer mint/burn access to token managers
+    // await transferMintAndBurnAccessToTokenManagerOnBase(tokenManagerAddress);
     
-    console.log("Axelar cross-chain integration completed successfully!");
-    console.log(`Token ID: ${tokenId}`);
-    console.log(`Token Manager Address: ${tokenManagerAddress}`);
-    console.log(`Salt (save for future reference): ${salt}`);
+    // console.log("Axelar cross-chain integration completed successfully!");
+    // console.log(`Token ID: ${tokenId}`);
+    // console.log(`Token Manager Address: ${tokenManagerAddress}`);
+    // console.log(`Salt (save for future reference): ${salt}`);
 
     // Uncomment the following lines to test token transfers
     // Be sure to replace with a valid receiver address
-    // const receiverAddress = process.env.RECEIVER_ADDRESS || "0x";
-    // const tokenManagerAddress = process.env.TOKEN_MANAGER_ADDRESS || "";
-    // const tokenId = process.env.TOKEN_ID || "";
+    const receiverAddress = process.env.RECEIVER_ADDRESS || "0x";
+    const tokenManagerAddress = process.env.TOKEN_MANAGER_ADDRESS || "";
+    const tokenId = process.env.TOKEN_ID || "";
 
-    // await transferTokensFromEthereumToBase(tokenManagerAddress, tokenId, receiverAddress);
-    // await transferTokensFromBaseToEthereum(tokenManagerAddress, tokenId, receiverAddress);
+    await transferTokensFromEthereumToBase(interchainTokenServiceContractAddress, tokenId, receiverAddress);
+    // await transferTokensFromBaseToEthereum(interchainTokenServiceContractAddress, tokenId, receiverAddress);
     
   } catch (error) {
     console.error("Error during Axelar cross-chain integration:", error);
