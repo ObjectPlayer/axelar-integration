@@ -29,8 +29,8 @@ Before you begin, ensure you have the following:
 
 Start by cloning the repository containing the integration scripts:
 ```bash
-git clone <repository-url>
-cd Axelar-Testing
+git clone https://github.com/ObjectPlayer/axelar-integration.git
+cd axelar-integration
 ```
 
 ### Step 2: Install Dependencies
